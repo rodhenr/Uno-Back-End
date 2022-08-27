@@ -1,10 +1,13 @@
 const express = require("express");
 const mongoose = require("mongoose");
+const gameRoutes = require("./app/routes/game.routes");
 
 const app = express();
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+app.use(gameRoutes);
 
 mongoose.connect("mongodb://localhost:27017/unodb");
 const db = mongoose.connection;
