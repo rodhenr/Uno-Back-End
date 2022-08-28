@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 
 const GameSessionSchema = Schema({
+  lastColor: String,
   lastPlayer: String,
   order: { type: [String], required: true },
   playersCards: {
