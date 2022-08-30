@@ -88,7 +88,7 @@ const startGame = async (req, res) => {
 };
 
 //No modo offline as jogadas da máquina serão executadas após o player escolher sua carta
-const playCard = async (req, res) => {
+const playerCard = async (req, res) => {
   const { card, playerId, sessionId } = req.body;
 
   try {
@@ -97,44 +97,41 @@ const playCard = async (req, res) => {
     if (session.winner !== "")
       return res.status(400).send("Sessão de jogo já finalizada!");
 
-    //Recebe a cor da última carta jogada
-    let lastChoosenColor = session.lastColor;
-
-    //Recebe a ordem das jogadas
+    let lastCard = session.lastCard;
+    let lastColor = session.lastColor;
+    let lastPlayer = session.lastPlayer;
     let order = session.order;
-
-    //Recebe as cartas do Deck
+    let orderBy = session.orderBy;
+    let players = session.playersCards;
     let remainingCards = session.remainingCards;
 
-    //Recebe o último jogador
-    let lastPlayer = session.lastPlayer;
-
-    //Recebe a lista de cartas de todos
-    const players = session.playersCards;
-    if (!players) return res.status(400).send("Jogador não encontrado!");
-
-    //Criar uma condição para rotacionar corretamente a ordem de jogadas, se o próximo jogador for o player então é necessário dar um return e mandar as informações para o player esperando sua próxima jogada
-
     /* RODADA PLAYER */
+
+    //Verifica se a carta existe
     const cardIndex = players
       .filter((i) => i.playerId === playerId)[0]
       .cards.indexOf(card);
     if (cardIndex === -1) return res.status(404).send("Carta inválida!");
 
-    const lastPlayerCard = players
-      .filter((i) => i.playerId === playerId)[0]
-      .cards.splice(cardIndex, 1)[0];
+    //Remove carta do deck do jogador
+    players.forEach((i) => {
+      if (i.playerId === playerId) {
+        i.cards.splice(cardIndex, 1);
+      }
+    });
 
-    if (lastPlayerCard.charAt(0) === "C") {
+    //Condições da carta jogada
+    if (card.charAt(0) === "C") {
       const colors = ["Y", "R", "B", "G"];
       const randColor = colors[Math.floor(Math.random() * 4)];
-      lastChoosenColor = randColor;
-    } else if (lastPlayerCard.charAt(0) === "F") {
+      lastCard = card;
+      lastColor = randColor; // Troca a cor atual e sai do loop
+    } else if (card.charAt(0) === "F") {
       const newCards = [];
       const playerOrder = order.indexOf(playerId);
+      //Pega as 4 primeiras cartas do deck, transfere pro próximo player
       for (let i = 0; i < 4; i++) {
-        const newIndex = Math.floor(Math.random() * remainingCards.length);
-        newCards.push(remainingCards.splice(newIndex, 1));
+        newCards.push(remainingCards.splice(i, 1));
       }
       if (playerOrder === 3) {
         order[0].cards = [...order[0].cards, ...newCards];
@@ -144,18 +141,21 @@ const playCard = async (req, res) => {
           ...newCards,
         ];
       }
-
+      //Por fim, muda a cor atual e sai do loop
       const colors = ["Y", "R", "B", "G"];
       const randColor = colors[Math.floor(Math.random() * 4)];
-      lastChoosenColor = randColor;
-    } else if (lastPlayerCard.charAt(0) === "R") {
-    } else if (lastPlayerCard.charAt(0) === "S") {
-    } else if (lastPlayerCard.charAt(0) === "T") {
+      lastCard = card;
+      lastColor = randColor;
+    } else if (card.charAt(0) === "R") {
+      //Criar condição do Reverse, usando ASC e DESC
+    } else if (card.charAt(0) === "S") {
+      //Criar condição do Stop, baseado no ASC e DESC
+    } else if (card.charAt(0) === "T") {
       const newCards = [];
       const playerOrder = order.indexOf(playerId);
+      //Adiciona as 2 primeiras cartas do deck no próximo player e sai do loop
       for (let i = 0; i < 2; i++) {
-        const newIndex = Math.floor(Math.random() * remainingCards.length);
-        newCards.push(remainingCards.splice(newIndex, 1));
+        newCards.push(remainingCards.splice(i, 1));
       }
       if (playerOrder === 3) {
         order[0].cards = [...order[0].cards, ...newCards];
@@ -165,37 +165,29 @@ const playCard = async (req, res) => {
           ...newCards,
         ];
       }
+      lastCard = card;
+      lastColor = lastPlayerCard.chartAt(2);
+    } else {
+      //Regras se for uma carta de número
+      lastCard = card;
+      lastColor = lastPlayerCard.chartAt(2);
     }
 
-    lastChoosenColor = lastPlayerCard.chartAt(2);
     /* FIM RODADA PLAYER */
 
-    /* RODADA MÁQUINA */
-    const m1deck = players.filter((i) => i.playerId === "maquina1").cards;
-    let lastM1Card = "";
+    //Checar qual o próximo player
+    const nextPlayer = "";
 
-    for (let i = 0; i < m1deck.length; i++) {
-      const tryCard = chooseCard(
-        m1deck[i],
-        lastPlayerCard.substring(0, 2),
-        lastPlayerCard.chartAt(2)
-      );
-      if (tryCard !== null) {
-        if (tryCard.chartAt(0) === "C") {
-          //necessário escolher uma cor
-        } else if (tryCard.chartAt(0) === "F") {
-          //necessário escolher uma cor e adicionar +4 cartas para o próximo player
-        }
-        lastM1Card = tryCard;
-        return;
-      }
-    }
-    /* FIM RODADA MÁQUINA */
+    //Lista de cartas do próximo turno
+    const nextTurnCards = "";
 
+    //Cria um objeto com as informações atualizadas
     const sessionModified = {
-      lastColor: lastChoosenColor,
+      lastCard,
+      lastColor,
       lastPlayer,
       order,
+      orderBy,
       playersCards: players,
       remainingCards,
       winner: "",
@@ -203,12 +195,99 @@ const playCard = async (req, res) => {
 
     //Atualiza o banco de dados
     await GameSession.findByIdAndUpdate(sessionId, sessionModified);
-
-    res.SendStatus(200);
+    res.status(200).json({ nextPlayer, nextTurnCards });
   } catch (err) {
     res.status(500).send("Erro no servidor...");
     console.log(err);
   }
 };
 
-module.exports = { playCard, startGame, startNewSession };
+const cpuCard = async (req, res) => {
+  const { cpuId, sessionId } = req.body;
+
+  try {
+    const session = await GameSession.findById(sessionId);
+    if (!session) return res.status(404).send("Sessão de jogo não encontrada!");
+    if (session.winner !== "")
+      return res.status(400).send("Sessão de jogo já finalizada!");
+
+    let lastCard = session.lastCard;
+    let lastColor = session.lastColor;
+    let lastPlayer = session.lastPlayer;
+    let order = session.order;
+    let orderBy = session.orderBy;
+    let players = session.playersCards;
+    let remainingCards = session.remainingCards;
+
+    /* RODADA MÁQUINA */
+
+    const cpuCards = players.filter((i) => i.playerId === cpuId).cards;
+
+    //Escolhendo a carta do CPU
+    for (let i = 0; i < cpuCards.length; i++) {
+      const tryCard = chooseCard(
+        cpuCards[i],
+        lastCard.substring(0, 2),
+        lastColor
+      );
+      if (tryCard !== null) {
+        if (tryCard.chartAt(0) === "C") {
+          const colors = ["Y", "R", "B", "G"];
+          const randColor = colors[Math.floor(Math.random() * 4)];
+          lastCard = tryCard;
+          lastColor = randColor; // Troca a cor atual e sai do loop
+        } else if (tryCard.chartAt(0) === "F") {
+          const newCards = [];
+          const cpuOrder = order.indexOf(cpuId);
+          //Pega as 4 primeiras cartas do deck, transfere pro próximo player
+          for (let i = 0; i < 4; i++) {
+            newCards.push(remainingCards.splice(i, 1));
+          }
+          if (cpuOrder === 3) {
+            order[0].cards = [...order[0].cards, ...newCards];
+          } else {
+            //ORGANIZAR POR ASC E DESC
+            order[cpuOrder + 1].cards = [
+              ...order[cpuOrder + 1].cards,
+              ...newCards,
+            ];
+          }
+          //Por fim, muda a cor atual e sai do loop
+          const colors = ["Y", "R", "B", "G"];
+          const randColor = colors[Math.floor(Math.random() * 4)];
+          lastCard = tryCard;
+          lastColor = randColor;
+        }
+        return;
+      }
+    }
+
+    /* FIM RODADA MÁQUINA */
+
+    //Checar qual o próximo player
+    const nextPlayer = "";
+
+    //Lista de cartas do próximo turno
+    const nextTurnCards = "";
+
+    const sessionModified = {
+      lastCard,
+      lastColor,
+      lastPlayer,
+      order,
+      orderBy,
+      playersCards: players,
+      remainingCards,
+      winner: "", //Verificar
+    };
+
+    //Atualiza o banco de dados
+    await GameSession.findByIdAndUpdate(sessionId, sessionModified);
+    res.status(200).json({ nextPlayer, nextTurnCards });
+  } catch (err) {
+    res.status(500).send("Erro no servidor...");
+    console.log(err);
+  }
+};
+
+module.exports = { cpuCard, playerCard, startGame, startNewSession };
