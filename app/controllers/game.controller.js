@@ -87,7 +87,6 @@ const startGame = async (req, res) => {
   }
 };
 
-//No modo offline as jogadas da máquina serão executadas após o player escolher sua carta
 const playerCard = async (req, res) => {
   const { card, playerId, sessionId } = req.body;
 
@@ -104,6 +103,24 @@ const playerCard = async (req, res) => {
     let orderBy = session.orderBy;
     let players = session.playersCards;
     let remainingCards = session.remainingCards;
+
+    //Proteção contra jogar na hora errada
+    if (orderBy === "ASC") {
+      const lastPlayerOrder = order.indexOf(lastPlayer);
+
+      if (
+        (lastPlayerOrder === 3 && order[0] !== playerId) ||
+        order[lastPlayerOrder + 1] !== playerId
+      )
+        return res.status(404).send("Não é a sua rodada ainda!");
+    } else {
+      const lastPlayerOrder = order.indexOf(lastPlayer);
+      if (
+        (lastPlayerOrder === 0 && order[3] !== playerId) ||
+        order[lastPlayerOrder - 1] !== playerId
+      )
+        return res.status(404).send("Não é a sua rodada ainda!");
+    }
 
     /* RODADA PLAYER */
 
@@ -129,27 +146,57 @@ const playerCard = async (req, res) => {
     } else if (card.charAt(0) === "F") {
       const newCards = [];
       const playerOrder = order.indexOf(playerId);
-      //Pega as 4 primeiras cartas do deck, transfere pro próximo player
+      //Pega as 4 primeiras cartas do deck, transfere pro player a seguir/anterior
       for (let i = 0; i < 4; i++) {
         newCards.push(remainingCards.splice(i, 1));
       }
       if (playerOrder === 3) {
-        order[0].cards = [...order[0].cards, ...newCards];
+        if (orderBy === "ASC") {
+          order[0].cards = [...order[0].cards, ...newCards];
+        } else {
+          order[2].cards = [...order[2].cards, ...newCards];
+        }
+      } else if (playerOrder === 0) {
+        if (orderBy === "DESC") {
+          order[4].cards = [...order[4].cards, ...newCards];
+        } else {
+          order[1].cards = [...order[1].cards, ...newCards];
+        }
+      } else if (orderBy === "DESC") {
+        order[playerOrder - 1].cards = [
+          ...order[playerOrder - 1].cards,
+          ...newCards,
+        ];
       } else {
         order[playerOrder + 1].cards = [
           ...order[playerOrder + 1].cards,
           ...newCards,
         ];
       }
+
       //Por fim, muda a cor atual e sai do loop
       const colors = ["Y", "R", "B", "G"];
       const randColor = colors[Math.floor(Math.random() * 4)];
       lastCard = card;
       lastColor = randColor;
     } else if (card.charAt(0) === "R") {
-      //Criar condição do Reverse, usando ASC e DESC
+      orderBy === "ASC" ? "DESC" : "ASC";
     } else if (card.charAt(0) === "S") {
-      //Criar condição do Stop, baseado no ASC e DESC
+      const playerOrder = order.indexOf(playerId);
+
+      if (orderBy === "ASC") {
+        if (playerOrder === 3) {
+          lastPlayer = order[0];
+        } else {
+          lastPlayer = order[playerOrder + 1];
+        }
+      } else {
+        if (playerOrder === 0) {
+          lastPlayer = order[3];
+        } else {
+          lastPlayer = order[playerOrder - 1];
+        }
+      }
     } else if (card.charAt(0) === "T") {
       const newCards = [];
       const playerOrder = order.indexOf(playerId);
@@ -158,13 +205,29 @@ const playerCard = async (req, res) => {
         newCards.push(remainingCards.splice(i, 1));
       }
       if (playerOrder === 3) {
-        order[0].cards = [...order[0].cards, ...newCards];
+        if (orderBy === "ASC") {
+          order[0].cards = [...order[0].cards, ...newCards];
+        } else {
+          order[2].cards = [...order[2].cards, ...newCards];
+        }
+      } else if (playerOrder === 0) {
+        if (orderBy === "DESC") {
+          order[4].cards = [...order[4].cards, ...newCards];
+        } else {
+          order[1].cards = [...order[1].cards, ...newCards];
+        }
+      } else if (orderBy === "DESC") {
+        order[playerOrder - 1].cards = [
+          ...order[playerOrder - 1].cards,
+          ...newCards,
+        ];
       } else {
         order[playerOrder + 1].cards = [
           ...order[playerOrder + 1].cards,
           ...newCards,
         ];
       }
+
       lastCard = card;
       lastColor = lastPlayerCard.chartAt(2);
     } else {
@@ -176,10 +239,29 @@ const playerCard = async (req, res) => {
     /* FIM RODADA PLAYER */
 
     //Checar qual o próximo player
-    const nextPlayer = "";
+    let nextPlayer = "";
+    if (orderBy === "ASC") {
+      if (order[lastPlayer] === 3) {
+        nextPlayer = order[0];
+      } else {
+        nextPlayer = order[lastPlayer + 1];
+      }
+    } else {
+      if (order[lastPlayer] === 0) {
+        nextPlayer = order[3];
+      } else {
+        nextPlayer = order[lastPlayer - 1];
+      }
+    }
 
     //Lista de cartas do próximo turno
-    const nextTurnCards = "";
+    const nextTurnCards = players.map((i) => {
+      if (i.playerId === playerId) {
+        return i.cards;
+      } else {
+        return i.cards.length;
+      }
+    });
 
     //Cria um objeto com as informações atualizadas
     const sessionModified = {
