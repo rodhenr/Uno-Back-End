@@ -1,7 +1,7 @@
 const UserModel = require("../models/UserModel");
 const GameSession = require("../models/GameSessionModel");
 const { v4: uuidv4 } = require("uuid");
-const { cards, cardFunc, chooseCpuCard } = require("../helpers/rules.helpers");
+const { cards, cardFunc, checkCard } = require("../helpers/rules.helpers");
 
 const startNewSession = async (req, res) => {
   const { playerId, mode } = req.query;
@@ -112,21 +112,24 @@ const playerCard = async (req, res) => {
         (lastPlayerOrder === 3 && order[0] !== playerId) ||
         order[lastPlayerOrder + 1] !== playerId
       )
-        return res.status(404).send("Não é a sua rodada ainda!");
+        return res.status(400).send("Não é a sua rodada ainda!");
     } else {
       const lastPlayerOrder = order.indexOf(lastPlayer);
+
       if (
         (lastPlayerOrder === 0 && order[3] !== playerId) ||
         order[lastPlayerOrder - 1] !== playerId
       )
-        return res.status(404).send("Não é a sua rodada ainda!");
+        return res.status(400).send("Não é a sua rodada ainda!");
     }
 
-    //Verifica se a carta existe
+    //Verifica se a carta existe e se é válida no turno atual
     const cardIndex = players
       .filter((i) => i.playerId === playerId)[0]
       .cards.indexOf(card);
     if (cardIndex === -1) return res.status(404).send("Carta inválida!");
+    if (checkCard(card, lastCard, lastColor) === null)
+      return res.status(400).send("Carta inválida!");
 
     /* RODADA PLAYER */
     const play = cardFunc(
@@ -139,9 +142,7 @@ const playerCard = async (req, res) => {
       remainingCards
     );
 
-    /* FIM RODADA PLAYER */
-
-    //Checar qual o próximo player
+    //Verifica qual o próximo player
     let nextPlayer = "";
     if (orderBy === "ASC") {
       if (order[play.lastPlayer] === 3) {
@@ -157,7 +158,7 @@ const playerCard = async (req, res) => {
       }
     }
 
-    //Lista de cartas do próximo turno
+    //Lista as cartas do jogador e o número de cartas das CPUs para o próximo turno
     const nextTurnCards = play.players.map((i) => {
       if (i.playerId === playerId) {
         return i.cards;
@@ -165,6 +166,7 @@ const playerCard = async (req, res) => {
         return i.cards.length;
       }
     });
+    /* FIM RODADA PLAYER */
 
     //Cria um objeto com as informações atualizadas
     const sessionModified = {
@@ -188,7 +190,7 @@ const playerCard = async (req, res) => {
 };
 
 const cpuCard = async (req, res) => {
-  const { cpuId, sessionId } = req.body;
+  const { cpuId, playerId, sessionId } = req.body;
 
   try {
     const session = await GameSession.findById(sessionId);
@@ -206,98 +208,69 @@ const cpuCard = async (req, res) => {
 
     /* RODADA MÁQUINA */
     const cpuCards = players.filter((i) => i.playerId === cpuId)[0].cards;
+    let play;
 
     let i = 0;
     //Escolhendo a carta do CPU
     while (i < cpuCards.length) {
-      const currentCard = chooseCpuCard(
+      const currentCard = checkCard(
         cpuCards[i],
         lastCard.substring(0, 2),
         lastColor
       );
       if (currentCard !== null) {
-        if (currentCard.chartAt(0) === "C") {
-          const colors = ["Y", "R", "B", "G"];
-          const randColor = colors[Math.floor(Math.random() * 4)];
-          lastCard = currentCard;
-          lastColor = randColor; // Troca a cor atual e sai do loop
-        } else if (currentCard.chartAt(0) === "F") {
-          const newCards = [];
-          const cpuOrder = order.indexOf(cpuId);
-          //Pega as 4 primeiras cartas do deck, transfere pro próximo player
-          for (let i = 0; i < 4; i++) {
-            newCards.push(remainingCards.splice(i, 1));
-          }
-          if (cpuOrder === 3) {
-            if (orderBy === "ASC") {
-              order[0].cards = [...order[0].cards, ...newCards];
-            } else {
-              order[2].cards = [...order[2].cards, ...newCards];
-            }
-          } else if (cpuOrder === 0) {
-            if (orderBy === "DESC") {
-              order[4].cards = [...order[4].cards, ...newCards];
-            } else {
-              order[1].cards = [...order[1].cards, ...newCards];
-            }
-          } else if (orderBy === "DESC") {
-            order[cpuOrder - 1].cards = [
-              ...order[cpuOrder - 1].cards,
-              ...newCards,
-            ];
-          } else {
-            order[cpuOrder + 1].cards = [
-              ...order[cpuOrder + 1].cards,
-              ...newCards,
-            ];
-          }
-          //Por fim, muda a cor atual e sai do loop
-          const colors = ["Y", "R", "B", "G"];
-          const randColor = colors[Math.floor(Math.random() * 4)];
-          lastCard = currentCard;
-          lastColor = randColor;
-        }
-        return;
+        play = cardFunc(
+          currentCard,
+          cpuId,
+          lastPlayer,
+          order,
+          orderBy,
+          players,
+          remainingCards
+        );
+
+        i = cpuCards.length;
       } else {
         i++;
       }
     }
 
-    /* FIM RODADA MÁQUINA */
+    //CRIAR REGRA PARA SACAR CARTA
 
-    //Checar qual o próximo player
+    //Verifica qual o próximo player
     let nextPlayer = "";
     if (orderBy === "ASC") {
-      if (order[lastPlayer] === 3) {
+      if (order[play.lastPlayer] === 3) {
         nextPlayer = order[0];
       } else {
-        nextPlayer = order[lastPlayer + 1];
+        nextPlayer = order[play.lastPlayer + 1];
       }
     } else {
-      if (order[lastPlayer] === 0) {
+      if (order[play.lastPlayer] === 0) {
         nextPlayer = order[3];
       } else {
-        nextPlayer = order[lastPlayer - 1];
+        nextPlayer = order[play.lastPlayer - 1];
       }
     }
 
-    //Lista de cartas do próximo turno
-    const nextTurnCards = players.map((i) => {
+    //Lista as cartas do jogador e o número de cartas das CPUs para o próximo turno
+    const nextTurnCards = play.players.map((i) => {
       if (i.playerId === playerId) {
         return i.cards;
       } else {
         return i.cards.length;
       }
     });
+    /* FIM RODADA MÁQUINA */
 
     const sessionModified = {
-      lastCard,
-      lastColor,
-      lastPlayer,
-      order,
-      orderBy,
-      playersCards: players,
-      remainingCards,
+      lastCard: card,
+      lastColor: play.lastColor,
+      lastPlayer: play.lastPlayer,
+      order: play.order,
+      orderBy: play.orderBy,
+      playersCards: play.players,
+      remainingCards: play.remainingCards,
       winner: "",
     };
 

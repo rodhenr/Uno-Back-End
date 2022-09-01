@@ -1,4 +1,4 @@
-const chooseCpuCard = (card, lastCard, lastColor) => {
+const checkCard = (card, lastCard, lastColor) => {
   const firstLetter = card.charAt(0);
   const secondLetter = card.charAt(1);
   const thirdLetter = card.charAt(2);
@@ -267,4 +267,4 @@ const cards = [
 //S - STOP
 //T - +DOIS
 
-module.exports = { cards, cardFunc, chooseCpuCard };
+module.exports = { cards, cardFunc, checkCard };
