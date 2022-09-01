@@ -12,9 +12,10 @@ const checkCard = (card, lastCard, lastColor) => {
   } else if (
     (firstLetter === "R" && thirdLetter === lastColor) ||
     (firstLetter === "S" && thirdLetter === lastColor) ||
-    (firstLetter === "T" && thirdLetter === lastColor)
+    (firstLetter === "T" && thirdLetter === lastColor) ||
+    thirdLetter === lastColor
   ) {
-    return card; // caso seja carta especial de cor
+    return card; // caso seja carta especial de cor ou somente da mesma cor
   } else {
     return null; // caso as cartas não combinem
   }
@@ -23,6 +24,7 @@ const checkCard = (card, lastCard, lastColor) => {
 const cardFunc = (
   card,
   id,
+  lastColor,
   lastPlayer,
   order,
   orderBy,
@@ -40,14 +42,14 @@ const cardFunc = (
     const updatedPlayers = players.map((i) => {
       if (i.playerId === id) {
         const cards = i.cards.filter((j) => j !== card);
-        return [i.playerId, cards];
+        return { playerId: i.playerId, cards: cards };
       } else {
         return i;
       }
     });
-
     //lastCard = card;
     return {
+      lastCard: card,
       lastColor: randColor,
       lastPlayer,
       order,
@@ -99,13 +101,14 @@ const cardFunc = (
     const updatedPlayers = players.map((i) => {
       if (i.playerId === id) {
         const cards = i.cards.filter((j) => j !== card);
-        return [i.playerId, cards];
+        return { playerId: i.playerId, cards: cards };
       } else {
         return i;
       }
     });
 
     return {
+      lastCard: card,
       lastColor: newColor,
       lastPlayer,
       order,
@@ -121,13 +124,14 @@ const cardFunc = (
     const updatedPlayers = players.map((i) => {
       if (i.playerId === id) {
         const cards = i.cards.filter((j) => j !== card);
-        return [i.playerId, cards];
+        return { playerId: i.playerId, cards: cards };
       } else {
         return i;
       }
     });
 
     return {
+      lastCard: card,
       lastColor,
       lastPlayer,
       order,
@@ -156,13 +160,14 @@ const cardFunc = (
     const updatedPlayers = players.map((i) => {
       if (i.playerId === id) {
         const cards = i.cards.filter((j) => j !== card);
-        return [i.playerId, cards];
+        return { playerId: i.playerId, cards: cards };
       } else {
         return i;
       }
     });
 
     return {
+      lastCard: card,
       lastColor,
       lastPlayer,
       order,
@@ -176,13 +181,15 @@ const cardFunc = (
     const updatedPlayers = players.map((i) => {
       if (i.playerId === id) {
         const cards = i.cards.filter((j) => j !== card);
-        return [i.playerId, cards];
+        return { playerId: i.playerId, cards: cards };
       } else {
+        console.log(i)
         return i;
       }
     });
 
     return {
+      lastCard: card,
       lastColor,
       lastPlayer,
       order,

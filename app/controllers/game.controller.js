@@ -4,12 +4,12 @@ const { v4: uuidv4 } = require("uuid");
 const { cards, cardFunc, checkCard } = require("../helpers/rules.helpers");
 
 const startNewSession = async (req, res) => {
-  const { playerId, mode } = req.query;
-
-  //mode: offline
+  const { playerId } = req.body;
   const cardList = cards;
 
   try {
+    if (!playerId || playerId === "")
+      return res.status(400).send("Player Inválido!");
     //ordem de jogar
     const orderPlayer = Math.floor(Math.random() * 4);
     const order = [];
@@ -33,7 +33,6 @@ const startNewSession = async (req, res) => {
 
       //insere no array as cartas daquele player
       playersCards.push({ playerId: i, cards });
-      console.log(playersCards);
     });
 
     //randomiza o deck restante
@@ -42,10 +41,16 @@ const startNewSession = async (req, res) => {
       [cardList[i], cardList[j]] = [cardList[j], cardList[i]];
     }
 
+    //Retira uma carta para ser a inicial
+    const lastCard = cardList.splice(1, 1)[0];
+
     //criando nova gameSession
     const newSession = await GameSession.create({
-      lastPlayer: order[0],
+      lastCard,
+      lastColor: lastCard.charAt(2),
+      lastPlayer: order[3],
       order,
+      orderBy: "ASC",
       playersCards,
       remainingCards: cardList,
       winner: "",
@@ -61,14 +66,12 @@ const startNewSession = async (req, res) => {
 };
 
 const startGame = async (req, res) => {
-  //offline
   const { playerId, sessionId } = req.query;
 
   if (!playerId || !sessionId)
     return res.status(404).send("Informações inválidas!");
 
   try {
-    //É NECESSÁRIO VALIDAR O ID ANTES DE FAZER A QUERY
     //Procura e filtra a Session
     const session = await GameSession.findById(sessionId);
     if (!session) return res.status(404).send("Sessão de jogo não encontrada!");
@@ -80,7 +83,16 @@ const startGame = async (req, res) => {
     if (player.length === 0)
       return res.status(404).send("Jogador não encontrado!");
 
-    res.status(200).json({ cards: session.playersCards });
+    //Filtra as cartas
+    const cards = session.playersCards.map((i) => {
+      if (i.playerId === playerId) {
+        return { id: i.playerId, cards: i.cards };
+      } else {
+        return { id: i.playerId, cards: i.cards.length };
+      }
+    });
+
+    res.status(200).json({ cards });
   } catch (err) {
     res.status(500).send("Erro no servidor...");
     console.log(err);
@@ -135,6 +147,7 @@ const playerCard = async (req, res) => {
     const play = cardFunc(
       card,
       playerId,
+      lastColor,
       lastPlayer,
       order,
       orderBy,
@@ -181,7 +194,7 @@ const playerCard = async (req, res) => {
     };
 
     //Atualiza o banco de dados
-    await GameSession.findByIdAndUpdate(sessionId, sessionModified);
+    //await GameSession.findByIdAndUpdate(sessionId, sessionModified);
     res.status(200).json({ nextPlayer, nextTurnCards });
   } catch (err) {
     res.status(500).send("Erro no servidor...");
@@ -191,6 +204,16 @@ const playerCard = async (req, res) => {
 
 const cpuCard = async (req, res) => {
   const { cpuId, playerId, sessionId } = req.body;
+
+  if (
+    !cpuId ||
+    cpuId === "" ||
+    !playerId ||
+    playerId === "" ||
+    !sessionId ||
+    sessionId === ""
+  )
+    return res.status(400).send("Informações inválidas!");
 
   try {
     const session = await GameSession.findById(sessionId);
@@ -205,6 +228,25 @@ const cpuCard = async (req, res) => {
     let orderBy = session.orderBy;
     let players = session.playersCards;
     let remainingCards = session.remainingCards;
+
+    //Proteção contra jogar na hora errada
+    if (orderBy === "ASC") {
+      const lastPlayerOrder = order.indexOf(lastPlayer);
+
+      if (
+        (lastPlayerOrder === 3 && order[0] !== cpuId) ||
+        order[lastPlayerOrder + 1] !== cpuId
+      )
+        return res.status(400).send("Não é a sua rodada ainda!");
+    } else {
+      const lastPlayerOrder = order.indexOf(lastPlayer);
+
+      if (
+        (lastPlayerOrder === 0 && order[3] !== cpuId) ||
+        order[lastPlayerOrder - 1] !== cpuId
+      )
+        return res.status(400).send("Não é a sua rodada ainda!");
+    }
 
     /* RODADA MÁQUINA */
     const cpuCards = players.filter((i) => i.playerId === cpuId)[0].cards;
@@ -222,6 +264,7 @@ const cpuCard = async (req, res) => {
         play = cardFunc(
           currentCard,
           cpuId,
+          lastColor,
           lastPlayer,
           order,
           orderBy,
@@ -234,8 +277,6 @@ const cpuCard = async (req, res) => {
         i++;
       }
     }
-
-    //CRIAR REGRA PARA SACAR CARTA
 
     //Verifica qual o próximo player
     let nextPlayer = "";
@@ -256,15 +297,15 @@ const cpuCard = async (req, res) => {
     //Lista as cartas do jogador e o número de cartas das CPUs para o próximo turno
     const nextTurnCards = play.players.map((i) => {
       if (i.playerId === playerId) {
-        return i.cards;
+        return { playerId: i.playerId, cards: i.cards };
       } else {
-        return i.cards.length;
+        return { playerId: i.playerId, cards: i.cards.length };
       }
     });
     /* FIM RODADA MÁQUINA */
 
     const sessionModified = {
-      lastCard: card,
+      lastCard: play.lastCard,
       lastColor: play.lastColor,
       lastPlayer: play.lastPlayer,
       order: play.order,
@@ -276,7 +317,7 @@ const cpuCard = async (req, res) => {
 
     //Atualiza o banco de dados
     await GameSession.findByIdAndUpdate(sessionId, sessionModified);
-    res.status(200).json({ nextPlayer, nextTurnCards });
+    res.status(200).json({ nextPlayer, nextTurnCards, lastCard: lastCard });
   } catch (err) {
     res.status(500).send("Erro no servidor...");
     console.log(err);
