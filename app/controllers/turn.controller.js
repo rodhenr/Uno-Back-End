@@ -1,105 +1,7 @@
-const UserModel = require("../models/UserModel");
 const GameSession = require("../models/GameSessionModel");
-const { v4: uuidv4 } = require("uuid");
-const { cards, cardFunc, checkCard } = require("../helpers/rules.helpers");
+const { playCard, checkCard } = require("../helpers/rules.helpers");
 
-const startNewSession = async (req, res) => {
-  const { playerId } = req.body;
-  const cardList = cards;
-
-  try {
-    if (!playerId || playerId === "")
-      return res.status(400).send("Player Inválido!");
-    //ordem de jogar
-    const orderPlayer = Math.floor(Math.random() * 4);
-    const order = [];
-    for (let i = 0; i < 4; i++) {
-      if (i === orderPlayer) {
-        order.push(playerId);
-      } else {
-        order.push(uuidv4());
-      }
-    }
-
-    //selecionar cartas para cada player
-    const playersCards = [];
-    order.forEach((i) => {
-      //selecionar 7 cartas do deck inicial de forma aleatória
-      const cards = [];
-      while (cards.length < 7) {
-        const newRand = Math.floor(Math.random() * cardList.length);
-        cards.push(cardList.splice(newRand, 1)[0]);
-      }
-
-      //insere no array as cartas daquele player
-      playersCards.push({ playerId: i, cards });
-    });
-
-    //randomiza o deck restante
-    for (let i = cardList.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [cardList[i], cardList[j]] = [cardList[j], cardList[i]];
-    }
-
-    //Retira uma carta para ser a inicial
-    const lastCard = cardList.splice(1, 1)[0];
-
-    //criando nova gameSession
-    const newSession = await GameSession.create({
-      lastCard,
-      lastColor: lastCard.charAt(2),
-      lastPlayer: order[3],
-      order,
-      orderBy: "ASC",
-      playersCards,
-      remainingCards: cardList,
-      winner: "",
-    });
-
-    const sessionId = newSession._id;
-
-    res.status(200).json({ sessionId });
-  } catch (err) {
-    console.log(err);
-    res.status(500).send("Erro no servidor...");
-  }
-};
-
-const startGame = async (req, res) => {
-  const { playerId, sessionId } = req.query;
-
-  if (!playerId || !sessionId)
-    return res.status(404).send("Informações inválidas!");
-
-  try {
-    //Procura e filtra a Session
-    const session = await GameSession.findById(sessionId);
-    if (!session) return res.status(404).send("Sessão de jogo não encontrada!");
-    if (session.winner !== "")
-      return res.status(400).send("Sessão de jogo já finalizada!");
-
-    //Verifica se o player em questão está participando da Session
-    const player = session.order.filter((i) => i === playerId);
-    if (player.length === 0)
-      return res.status(404).send("Jogador não encontrado!");
-
-    //Filtra as cartas
-    const cards = session.playersCards.map((i) => {
-      if (i.playerId === playerId) {
-        return { id: i.playerId, cards: i.cards };
-      } else {
-        return { id: i.playerId, cards: i.cards.length };
-      }
-    });
-
-    res.status(200).json({ cards });
-  } catch (err) {
-    res.status(500).send("Erro no servidor...");
-    console.log(err);
-  }
-};
-
-const playerCard = async (req, res) => {
+const playerTurn = async (req, res) => {
   const { card, playerId, sessionId } = req.body;
 
   try {
@@ -144,7 +46,7 @@ const playerCard = async (req, res) => {
       return res.status(400).send("Carta inválida!");
 
     /* RODADA PLAYER */
-    const play = cardFunc(
+    const play = playCard(
       card,
       playerId,
       lastColor,
@@ -293,7 +195,7 @@ const playerBuyCard = async (req, res) => {
   }
 };
 
-const cpuCard = async (req, res) => {
+const cpuTurn = async (req, res) => {
   const { cpuId, playerId, sessionId } = req.body;
 
   if (
@@ -352,7 +254,7 @@ const cpuCard = async (req, res) => {
       );
 
       if (currentCard !== null) {
-        play = cardFunc(
+        play = playCard(
           currentCard,
           cpuId,
           lastColor,
@@ -470,9 +372,7 @@ const cpuCard = async (req, res) => {
 };
 
 module.exports = {
-  cpuCard,
+  cpuTurn,
   playerBuyCard,
-  playerCard,
-  startGame,
-  startNewSession,
+  playerTurn,
 };

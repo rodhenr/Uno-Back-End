@@ -1,3 +1,15 @@
+//firstLetter = Identificador
+//secondLetter = Caso seja número
+//thirdLetter = Cor
+
+//01 - NÚMERO
+//C - MUDAR COR
+//F - +QUATRO
+//R - REVERSE
+//S - STOP
+//T - +DOIS
+
+// Checa se a carta atual e a última carta jogada retornam uma jogada válida ou não
 const checkCard = (card, lastCard, lastColor) => {
   const firstLetter = card.charAt(0);
   const secondLetter = card.charAt(1);
@@ -21,7 +33,8 @@ const checkCard = (card, lastCard, lastColor) => {
   }
 };
 
-const cardFunc = (
+// Verifica em qual caso a carta jogada se encaixa e então retorna um objeto com os dados atualizados
+const playCard = (
   card,
   id,
   lastColor,
@@ -31,14 +44,14 @@ const cardFunc = (
   players,
   remainingCards
 ) => {
-  //Condições da carta jogada
   if (card.charAt(0) === "C") {
     lastPlayer = id;
 
-    //Muda a cor atual e sai do loop
+    // Muda a cor atual
     const colors = ["Y", "R", "B", "G"];
     const randColor = colors[Math.floor(Math.random() * 4)];
 
+    // Retira a carta do deck do player
     const updatedPlayers = players.map((i) => {
       if (i.playerId === id) {
         const cards = i.cards.filter((j) => j !== card);
@@ -47,7 +60,7 @@ const cardFunc = (
         return i;
       }
     });
-    //lastCard = card;
+
     return {
       lastCard: card,
       lastColor: randColor,
@@ -63,7 +76,7 @@ const cardFunc = (
     let newColor;
     lastPlayer = id;
 
-    //Pega as primeiras cartas do deck, transfere pro player a seguir/anterior
+    //Pega as primeiras cartas restantes do baralho
     if (card.charAt(0) === "F") {
       const colors = ["Y", "R", "B", "G"];
       newColor = colors[Math.floor(Math.random() * 4)];
@@ -78,6 +91,7 @@ const cardFunc = (
       newColor = card.chartAt(2);
     }
 
+    // Transfere as cartas para o próximo player a jogar
     if (orderBy === "ASC") {
       if (playerOrder === 3) {
         players[0].cards = [...players[0].cards, ...newCards];
@@ -98,6 +112,7 @@ const cardFunc = (
       }
     }
 
+    // Retira a carta do deck do player
     const updatedPlayers = players.map((i) => {
       if (i.playerId === id) {
         const cards = i.cards.filter((j) => j !== card);
@@ -118,9 +133,11 @@ const cardFunc = (
     };
   } else if (card.charAt(0) === "R") {
     lastPlayer = id;
-    //Inverte a ordem e sai do loop
-    orderBy === "ASC" ? "DESC" : "ASC";
 
+    // Inverte a ordem
+    orderBy === "ASC" ? (orderBy = "DESC") : (orderBy = "ASC");
+
+    // Retira a carta do deck do player
     const updatedPlayers = players.map((i) => {
       if (i.playerId === id) {
         const cards = i.cards.filter((j) => j !== card);
@@ -142,7 +159,7 @@ const cardFunc = (
   } else if (card.charAt(0) === "S") {
     const playerOrder = order.indexOf(id);
 
-    //Pula a rodada do próximo jogador
+    // Pula a rodada do próximo jogador
     if (orderBy === "ASC") {
       if (playerOrder === 3) {
         lastPlayer = order[0];
@@ -157,6 +174,7 @@ const cardFunc = (
       }
     }
 
+    // Retira a carta do deck do player
     const updatedPlayers = players.map((i) => {
       if (i.playerId === id) {
         const cards = i.cards.filter((j) => j !== card);
@@ -178,12 +196,13 @@ const cardFunc = (
   } else {
     lastPlayer = id;
 
+    // Retira a carta do deck do player
     const updatedPlayers = players.map((i) => {
       if (i.playerId === id) {
         const cards = i.cards.filter((j) => j !== card);
         return { playerId: i.playerId, cards: cards };
       } else {
-        console.log(i)
+        console.log(i);
         return i;
       }
     });
@@ -200,78 +219,4 @@ const cardFunc = (
   }
 };
 
-const cards = [
-  "00R",
-  "00Y",
-  "00G",
-  "00B",
-  "01R",
-  "01Y",
-  "01G",
-  "01B",
-  "02R",
-  "02Y",
-  "02G",
-  "02B",
-  "03R",
-  "03Y",
-  "03G",
-  "03B",
-  "04R",
-  "04Y",
-  "04G",
-  "04B",
-  "05R",
-  "05Y",
-  "05G",
-  "05B",
-  "06R",
-  "06Y",
-  "06G",
-  "06B",
-  "07R",
-  "07Y",
-  "07G",
-  "07B",
-  "08R",
-  "08Y",
-  "08G",
-  "08B",
-  "09R",
-  "09Y",
-  "09G",
-  "09B",
-  "RER",
-  "REY",
-  "REG",
-  "REB",
-  "STR",
-  "STY",
-  "STG",
-  "STB",
-  "TWR",
-  "TWY",
-  "TWG",
-  "TWB",
-  "FO1",
-  "FO2",
-  "FO3",
-  "FO4",
-  "CH1",
-  "CH2",
-  "CH3",
-  "CH4",
-];
-
-//firstLetter = Identificador
-//secondLetter = Caso seja número
-//thirdLetter = Cor
-
-//01 - NÚMERO
-//C - MUDAR COR
-//F - +QUATRO
-//R - REVERSE
-//S - STOP
-//T - +DOIS
-
-module.exports = { cards, cardFunc, checkCard };
+module.exports = { playCard, checkCard };
