@@ -34,7 +34,11 @@ const startNewSession = async (req, res) => {
       cards.push(cardList.splice(0, 1)[0]);
     }
 
-    playersCards.push({ playerId: i, cards });
+    if (i === playerId) {
+      playersCards.push({ playerId: i, cards, isCpu: false });
+    } else {
+      playersCards.push({ playerId: i, cards, isCpu: true });
+    }
   });
 
   // Retira uma carta do baralho para ser a inicial
@@ -66,26 +70,26 @@ const startGame = async (req, res) => {
   const { playerId, sessionId } = req.query;
 
   if (!playerId || !sessionId)
-    return res.status(404).send("Informações inválidas!");
+    return res.status(400).send("Informações inválidas!");
 
   try {
-    //Procura e filtra a Session
+    // Procura e filtra a Session
     const session = await GameSession.findById(sessionId);
     if (!session) return res.status(404).send("Sessão de jogo não encontrada!");
     if (session.winner !== "")
       return res.status(400).send("Sessão de jogo já finalizada!");
 
-    //Verifica se o player em questão está participando da Session
+    // Verifica se o playerId está participando da Session
     const player = session.order.filter((i) => i === playerId);
     if (player.length === 0)
       return res.status(404).send("Jogador não encontrado!");
 
-    //Filtra as cartas
+    // Filtra as cartas
     const cards = session.playersCards.map((i) => {
       if (i.playerId === playerId) {
-        return { id: i.playerId, cards: i.cards };
+        return { ...i, cards: i.cards };
       } else {
-        return { id: i.playerId, cards: i.cards.length };
+        return { ...i, cards: i.cards.length };
       }
     });
 

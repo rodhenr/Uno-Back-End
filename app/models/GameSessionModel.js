@@ -2,17 +2,18 @@ const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 
 const GameSessionSchema = Schema({
-  lastCard: String,
-  lastColor: String,
-  lastPlayer: String,
+  lastCard: { type: String, required: true },
+  lastColor: { type: String, required: true },
+  lastPlayer: { type: String, required: true },
   order: { type: [String], required: true },
   orderBy: { type: String, default: "ASC" },
   playersCards: {
-    type: [{ playerId: String, cards: [String] }],
+    _id: false,
+    type: [{ playerId: String, cards: [String], isCpu: boolean }],
     required: true,
   },
   remainingCards: { type: [String], required: true },
-  winner: String,
+  winner: { type: String, required: true },
 });
 
 module.exports = mongoose.model("GameSession", GameSessionSchema);

@@ -41,7 +41,7 @@ const playCard = (
   lastPlayer,
   order,
   orderBy,
-  players,
+  playersCards,
   remainingCards
 ) => {
   if (card.charAt(0) === "C") {
@@ -52,7 +52,7 @@ const playCard = (
     const randColor = colors[Math.floor(Math.random() * 4)];
 
     // Retira a carta do deck do player
-    const updatedPlayers = players.map((i) => {
+    const updatedPlayers = playersCards.map((i) => {
       if (i.playerId === id) {
         const cards = i.cards.filter((j) => j !== card);
         return { playerId: i.playerId, cards: cards };
@@ -67,7 +67,7 @@ const playCard = (
       lastPlayer,
       order,
       orderBy,
-      players: updatedPlayers,
+      playersCards: updatedPlayers,
       remainingCards,
     };
   } else if (card.charAt(0) === "F" || card.charAt(0) === "T") {
@@ -94,26 +94,26 @@ const playCard = (
     // Transfere as cartas para o próximo player a jogar
     if (orderBy === "ASC") {
       if (playerOrder === 3) {
-        players[0].cards = [...players[0].cards, ...newCards];
+        playersCards[0].cards = [...playersCards[0].cards, ...newCards];
       } else {
-        players[playerOrder + 1].cards = [
-          ...players[playerOrder + 1].cards,
+        playersCards[playerOrder + 1].cards = [
+          ...playersCards[playerOrder + 1].cards,
           ...newCards,
         ];
       }
     } else {
       if (playerOrder === 0) {
-        players[3].cards = [...players[3].cards, ...newCards];
+        playersCards[3].cards = [...playersCards[3].cards, ...newCards];
       } else {
-        players[playerOrder - 1].cards = [
-          ...players[playerOrder - 1].cards,
+        playersCards[playerOrder - 1].cards = [
+          ...playersCards[playerOrder - 1].cards,
           ...newCards,
         ];
       }
     }
 
     // Retira a carta do deck do player
-    const updatedPlayers = players.map((i) => {
+    const updatedPlayers = playersCards.map((i) => {
       if (i.playerId === id) {
         const cards = i.cards.filter((j) => j !== card);
         return { playerId: i.playerId, cards: cards };
@@ -128,7 +128,7 @@ const playCard = (
       lastPlayer,
       order,
       orderBy,
-      players: updatedPlayers,
+      playersCards: updatedPlayers,
       remainingCards,
     };
   } else if (card.charAt(0) === "R") {
@@ -138,7 +138,7 @@ const playCard = (
     orderBy === "ASC" ? (orderBy = "DESC") : (orderBy = "ASC");
 
     // Retira a carta do deck do player
-    const updatedPlayers = players.map((i) => {
+    const updatedPlayers = playersCards.map((i) => {
       if (i.playerId === id) {
         const cards = i.cards.filter((j) => j !== card);
         return { playerId: i.playerId, cards: cards };
@@ -153,7 +153,7 @@ const playCard = (
       lastPlayer,
       order,
       orderBy,
-      players: updatedPlayers,
+      playersCards: updatedPlayers,
       remainingCards,
     };
   } else if (card.charAt(0) === "S") {
@@ -175,7 +175,7 @@ const playCard = (
     }
 
     // Retira a carta do deck do player
-    const updatedPlayers = players.map((i) => {
+    const updatedPlayers = playersCards.map((i) => {
       if (i.playerId === id) {
         const cards = i.cards.filter((j) => j !== card);
         return { playerId: i.playerId, cards: cards };
@@ -190,14 +190,14 @@ const playCard = (
       lastPlayer,
       order,
       orderBy,
-      players: updatedPlayers,
+      playersCards: updatedPlayers,
       remainingCards,
     };
   } else {
     lastPlayer = id;
 
     // Retira a carta do deck do player
-    const updatedPlayers = players.map((i) => {
+    const updatedPlayers = playersCards.map((i) => {
       if (i.playerId === id) {
         const cards = i.cards.filter((j) => j !== card);
         return { playerId: i.playerId, cards: cards };
@@ -213,10 +213,43 @@ const playCard = (
       lastPlayer,
       order,
       orderBy,
-      players: updatedPlayers,
+      playersCards: updatedPlayers,
       remainingCards,
     };
   }
 };
 
-module.exports = { playCard, checkCard };
+const nextTurnCheck = (lastPlayer, order, orderBy, playersCards, playerId) => {
+  // Checa qual próximo player a jogar
+  let nextPlayer = "";
+
+  if (orderBy === "ASC") {
+    if (order[lastPlayer] === 3) {
+      nextPlayer = order[0];
+    } else {
+      nextPlayer = order[lastPlayer + 1];
+    }
+  } else {
+    if (order[lastPlayer] === 0) {
+      nextPlayer = order[3];
+    } else {
+      nextPlayer = order[lastPlayer - 1];
+    }
+  }
+
+  // Lista as cartas do jogador e o número de cartas das CPUs para o próximo turno
+  const nextCards = playersCards.map((i) => {
+    if (i.playerId === playerId) {
+      return i.cards;
+    } else {
+      return i.cards.length;
+    }
+  });
+
+  return {
+    nextPlayer,
+    nextCards,
+  };
+};
+
+module.exports = { checkCard, nextTurnCheck, playCard };
