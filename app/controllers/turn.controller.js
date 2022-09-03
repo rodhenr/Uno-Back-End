@@ -140,8 +140,9 @@ const playTurn = async (req, res) => {
 
     const myInfo = playersCards.filter((i) => i.playerId === id)[0];
     let move;
+    
     if (myInfo.isCpu === true) {
-      //Escolhe uma carta com jogada válida para CPU
+      // Escolhe uma carta válida para CPU
       for (let i = 0; i < myInfo.cards.length; i++) {
         const currentCard = checkCard(
           myInfo.cards[i],
@@ -193,9 +194,9 @@ const playTurn = async (req, res) => {
       i.playerId === id;
     }).cards.length;
 
-    //Cria um objeto com as informações atualizadas
+    // Cria um objeto com as informações atualizadas
     const sessionModified = {
-      lastCard: card,
+      lastCard: move.lastCard,
       lastColor: move.lastColor,
       lastPlayer: move.lastPlayer,
       order: move.order,
@@ -205,7 +206,7 @@ const playTurn = async (req, res) => {
       winner: isWinner === 0 ? id : "",
     };
 
-    //Atualiza o banco de dados
+    // Atualiza o banco de dados
     await GameSession.findByIdAndUpdate(sessionId, sessionModified);
     res.status(200).json(nextTurn);
   } catch (err) {
