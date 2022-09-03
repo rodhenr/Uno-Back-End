@@ -3,6 +3,7 @@ const {
   playCard,
   checkCard,
   nextTurnCheck,
+  updateCards,
 } = require("../helpers/rules.helpers");
 
 const buyCard = async (req, res) => {
@@ -13,7 +14,7 @@ const buyCard = async (req, res) => {
   try {
     const session = await GameSession.findById(sessionId);
     if (!session) return res.status(404).send("Sessão de jogo não encontrada!");
-    if (session.winner !== "")
+    if (session.winner !== null)
       return res.status(400).send("Sessão de jogo já finalizada!");
 
     // Cria variáveis
@@ -25,25 +26,26 @@ const buyCard = async (req, res) => {
       orderBy,
       playersCards,
       remainingCards,
+      winner,
     } = session;
+
+    const lastPlayerOrder = order.indexOf(lastPlayer);
 
     // Proteção contra jogar na hora errada
     if (orderBy === "ASC") {
-      const lastPlayerOrder = order.indexOf(lastPlayer);
-
-      if (
-        (lastPlayerOrder === 3 && order[0] !== id) ||
-        order[lastPlayerOrder + 1] !== id
-      )
+      if (lastPlayerOrder === 3) {
+        if (order[0] !== id)
+          return res.status(400).send("Não é a sua rodada ainda!");
+      } else if (order[lastPlayerOrder + 1] !== id) {
         return res.status(400).send("Não é a sua rodada ainda!");
+      }
     } else {
-      const lastPlayerOrder = order.indexOf(lastPlayer);
-
-      if (
-        (lastPlayerOrder === 0 && order[3] !== id) ||
-        order[lastPlayerOrder - 1] !== id
-      )
+      if (lastPlayerOrder === 0) {
+        if (order[3] !== id)
+          return res.status(400).send("Não é a sua rodada ainda!");
+      } else if (order[lastPlayerOrder - 1] !== id) {
         return res.status(400).send("Não é a sua rodada ainda!");
+      }
     }
 
     // Compra uma carta do baralho
@@ -57,23 +59,24 @@ const buyCard = async (req, res) => {
 
     // Checa o próximo player e as cartas de todos players
     const nextTurn = nextTurnCheck(
+      lastCard,
+      lastColor,
       lastPlayer,
       order,
       orderBy,
-      playersCards,
-      playerId
+      playersCards
     );
 
     // Cria um objeto com as informações atualizadas
     const sessionModified = {
-      lastCard: newCard,
-      lastColor: newCard.charAt(2),
+      lastCard,
+      lastColor,
       lastPlayer,
       order,
       orderBy,
       playersCards,
       remainingCards,
-      winner: "",
+      winner,
     };
 
     // Atualiza o banco de dados
@@ -94,7 +97,7 @@ const playTurn = async (req, res) => {
   try {
     const session = await GameSession.findById(sessionId);
     if (!session) return res.status(404).send("Sessão de jogo não encontrada!");
-    if (session.winner !== "")
+    if (session.winner !== null)
       return res.status(400).json({
         message: "Sessão de jogo já finalizada!",
         winner: session.winner,
@@ -111,41 +114,43 @@ const playTurn = async (req, res) => {
       remainingCards,
     } = session;
 
-    // Proteção contra jogar na hora errada
-    if (orderBy === "ASC") {
-      const lastPlayerOrder = order.indexOf(lastPlayer);
-
-      if (
-        (lastPlayerOrder === 3 && order[0] !== id) ||
-        order[lastPlayerOrder + 1] !== id
-      )
-        return res.status(400).send("Não é a sua rodada ainda!");
-    } else {
-      const lastPlayerOrder = order.indexOf(lastPlayer);
-
-      if (
-        (lastPlayerOrder === 0 && order[3] !== id) ||
-        order[lastPlayerOrder - 1] !== id
-      )
-        return res.status(400).send("Não é a sua rodada ainda!");
-    }
-
-    // Verifica se a carta existe e se é válida no turno atual
-    const cardIndex = playersCards
-      .filter((i) => i.playerId === id)[0]
-      .cards.indexOf(card);
-    if (cardIndex === -1) return res.status(404).send("Carta inválida!");
-    if (checkCard(card, lastCard, lastColor) === null)
-      return res.status(400).send("Jogada inválida!");
-
+    const lastPlayerOrder = order.indexOf(lastPlayer);
     const myInfo = playersCards.filter((i) => i.playerId === id)[0];
     let move;
-    
+
+    // Proteção contra jogar na hora errada
+    if (orderBy === "ASC") {
+      if (lastPlayerOrder === 3) {
+        if (order[0] !== id)
+          return res.status(400).send("Não é a sua rodada ainda!");
+      } else if (order[lastPlayerOrder + 1] !== id) {
+        return res.status(400).send("Não é a sua rodada ainda!");
+      }
+    } else {
+      if (lastPlayerOrder === 0) {
+        if (order[3] !== id)
+          return res.status(400).send("Não é a sua rodada ainda!");
+      } else if (order[lastPlayerOrder - 1] !== id) {
+        return res.status(400).send("Não é a sua rodada ainda!");
+      }
+    }
+
+    // No caso de ser um player, verifica se a carta existe e se é válida no turno atual
+    if (myInfo.isCpu === false) {
+      const cardIndex = playersCards
+        .filter((i) => i.playerId === id)[0]
+        .cards.indexOf(card);
+      if (cardIndex === -1) return res.status(404).send("Carta inválida!");
+      if (checkCard(card, lastCard, lastColor) === null)
+        return res.status(400).send("Jogada inválida!");
+    }
+
+    // Faz uma jogada
     if (myInfo.isCpu === true) {
       // Escolhe uma carta válida para CPU
-      for (let i = 0; i < myInfo.cards.length; i++) {
+      for (let cardItem of myInfo.cards) {
         const currentCard = checkCard(
-          myInfo.cards[i],
+          cardItem,
           lastCard.substring(0, 2),
           lastColor
         );
@@ -159,11 +164,11 @@ const playTurn = async (req, res) => {
             lastPlayer,
             order,
             orderBy,
-            players,
+            playersCards,
             remainingCards
           );
 
-          return;
+          break;
         }
       }
     } else {
@@ -180,19 +185,40 @@ const playTurn = async (req, res) => {
       );
     }
 
+    // No caso da cpu não possuir uma carta válida, ela saca uma nova carta e passa o turno
+    if (move === undefined) {
+      console.log(myInfo.cards.length);
+      playersCards.forEach((i) => {
+        if (i.playerId === id) {
+          i.cards = [...i.cards, remainingCards.splice(0, 1)[0]];
+        }
+      });
+      console.log(myInfo.cards.length);
+
+      move = {
+        lastCard,
+        lastColor,
+        lastPlayer: id,
+        order,
+        orderBy,
+        playersCards,
+        remainingCards,
+      };
+    }
+
     // Checa o próximo player e as cartas de todos players
     const nextTurn = nextTurnCheck(
+      move.lastCard,
+      move.lastColor,
       move.lastPlayer,
       move.order,
       move.orderBy,
-      move.playersCards,
-      id
+      move.playersCards
     );
 
     // Verifica se venceu
-    const isWinner = playersCards.filter((i) => {
-      i.playerId === id;
-    }).cards.length;
+    const isWinner = move.playersCards.filter((i) => i.playerId === id)[0].cards
+      .length;
 
     // Cria um objeto com as informações atualizadas
     const sessionModified = {
@@ -203,12 +229,15 @@ const playTurn = async (req, res) => {
       orderBy: move.orderBy,
       playersCards: move.playersCards,
       remainingCards: move.remainingCards,
-      winner: isWinner === 0 ? id : "",
+      winner: isWinner === 0 ? id : null,
     };
 
     // Atualiza o banco de dados
     await GameSession.findByIdAndUpdate(sessionId, sessionModified);
-    res.status(200).json(nextTurn);
+
+    isWinner === 0
+      ? res.status(200).json({ message: "Fim de jogo!", winner: id })
+      : res.status(200).json(nextTurn);
   } catch (err) {
     res.status(500).send("Erro no servidor...");
     console.log(err);

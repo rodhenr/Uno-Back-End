@@ -1,6 +1,7 @@
 const GameSession = require("../models/GameSessionModel");
 const { v4: uuidv4 } = require("uuid");
 const { cards } = require("../helpers/cards.helpers");
+const { nextTurnCheck } = require("../helpers/rules.helpers");
 
 const startNewSession = async (req, res) => {
   const { playerId } = req.body;
@@ -54,7 +55,7 @@ const startNewSession = async (req, res) => {
       orderBy: "ASC",
       playersCards,
       remainingCards: cardList,
-      winner: "",
+      winner: null,
     });
 
     const sessionId = newSession._id;
@@ -76,7 +77,7 @@ const startGame = async (req, res) => {
     // Procura e filtra a Session
     const session = await GameSession.findById(sessionId);
     if (!session) return res.status(404).send("Sessão de jogo não encontrada!");
-    if (session.winner !== "")
+    if (session.winner !== null)
       return res.status(400).send("Sessão de jogo já finalizada!");
 
     // Verifica se o playerId está participando da Session
@@ -87,13 +88,23 @@ const startGame = async (req, res) => {
     // Filtra as cartas
     const cards = session.playersCards.map((i) => {
       if (i.playerId === playerId) {
-        return { ...i, cards: i.cards };
+        return { playerId: i.playerId, cards: i.cards, isCpu: i.isCpu };
       } else {
-        return { ...i, cards: i.cards.length };
+        return { playerId: i.playerId, cards: i.cards.length, isCpu: i.isCpu };
       }
     });
 
-    res.status(200).json({ cards });
+    const nextTurn = nextTurnCheck(
+      session.lastCard,
+      session.lastColor,
+      session.lastPlayer,
+      session.order,
+      session.orderBy,
+      session.playersCards,
+      playerId
+    );
+
+    res.status(200).json(nextTurn);
   } catch (err) {
     res.status(500).send("Erro no servidor...");
     console.log(err);

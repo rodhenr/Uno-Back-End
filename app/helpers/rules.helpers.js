@@ -45,38 +45,25 @@ const playCard = (
   remainingCards
 ) => {
   if (card.charAt(0) === "C") {
-    lastPlayer = id;
-
     // Muda a cor atual
     const colors = ["Y", "R", "B", "G"];
     const randColor = colors[Math.floor(Math.random() * 4)];
 
-    // Retira a carta do deck do player
-    const updatedPlayers = playersCards.map((i) => {
-      if (i.playerId === id) {
-        const cards = i.cards.filter((j) => j !== card);
-        return { playerId: i.playerId, cards: cards };
-      } else {
-        return i;
-      }
-    });
-
     return {
       lastCard: card,
       lastColor: randColor,
-      lastPlayer,
+      lastPlayer: id,
       order,
       orderBy,
-      playersCards: updatedPlayers,
+      playersCards: updateCards(card, id, playersCards),
       remainingCards,
     };
   } else if (card.charAt(0) === "F" || card.charAt(0) === "T") {
     const newCards = [];
     const playerOrder = order.indexOf(id);
     let newColor;
-    lastPlayer = id;
 
-    //Pega as primeiras cartas restantes do baralho
+    // Pega as primeiras cartas restantes do baralho
     if (card.charAt(0) === "F") {
       const colors = ["Y", "R", "B", "G"];
       newColor = colors[Math.floor(Math.random() * 4)];
@@ -88,7 +75,7 @@ const playCard = (
       for (let i = 0; i < 2; i++) {
         newCards.push(remainingCards.splice(i, 1)[0]);
       }
-      newColor = card.chartAt(2);
+      newColor = card.charAt(2);
     }
 
     // Transfere as cartas para o próximo player a jogar
@@ -112,48 +99,26 @@ const playCard = (
       }
     }
 
-    // Retira a carta do deck do player
-    const updatedPlayers = playersCards.map((i) => {
-      if (i.playerId === id) {
-        const cards = i.cards.filter((j) => j !== card);
-        return { playerId: i.playerId, cards: cards };
-      } else {
-        return i;
-      }
-    });
-
     return {
       lastCard: card,
       lastColor: newColor,
-      lastPlayer,
+      lastPlayer: id,
       order,
       orderBy,
-      playersCards: updatedPlayers,
+      playersCards: updateCards(card, id, playersCards),
       remainingCards,
     };
   } else if (card.charAt(0) === "R") {
-    lastPlayer = id;
-
     // Inverte a ordem
     orderBy === "ASC" ? (orderBy = "DESC") : (orderBy = "ASC");
 
-    // Retira a carta do deck do player
-    const updatedPlayers = playersCards.map((i) => {
-      if (i.playerId === id) {
-        const cards = i.cards.filter((j) => j !== card);
-        return { playerId: i.playerId, cards: cards };
-      } else {
-        return i;
-      }
-    });
-
     return {
       lastCard: card,
-      lastColor,
-      lastPlayer,
+      lastColor: card.charAt(2),
+      lastPlayer: id,
       order,
       orderBy,
-      playersCards: updatedPlayers,
+      playersCards: updateCards(card, id, playersCards),
       remainingCards,
     };
   } else if (card.charAt(0) === "S") {
@@ -174,82 +139,83 @@ const playCard = (
       }
     }
 
-    // Retira a carta do deck do player
-    const updatedPlayers = playersCards.map((i) => {
-      if (i.playerId === id) {
-        const cards = i.cards.filter((j) => j !== card);
-        return { playerId: i.playerId, cards: cards };
-      } else {
-        return i;
-      }
-    });
-
     return {
       lastCard: card,
-      lastColor,
+      lastColor: card.charAt(2),
       lastPlayer,
       order,
       orderBy,
-      playersCards: updatedPlayers,
+      playersCards: updateCards(card, id, playersCards),
       remainingCards,
     };
   } else {
-    lastPlayer = id;
-
-    // Retira a carta do deck do player
-    const updatedPlayers = playersCards.map((i) => {
-      if (i.playerId === id) {
-        const cards = i.cards.filter((j) => j !== card);
-        return { playerId: i.playerId, cards: cards };
-      } else {
-        console.log(i);
-        return i;
-      }
-    });
-
     return {
       lastCard: card,
-      lastColor,
-      lastPlayer,
+      lastColor: card.charAt(2),
+      lastPlayer: id,
       order,
       orderBy,
-      playersCards: updatedPlayers,
+      playersCards: updateCards(card, id, playersCards),
       remainingCards,
     };
   }
 };
 
-const nextTurnCheck = (lastPlayer, order, orderBy, playersCards, playerId) => {
+const nextTurnCheck = (
+  lastCard,
+  lastColor,
+  lastPlayer,
+  order,
+  orderBy,
+  playersCards,
+) => {
   // Checa qual próximo player a jogar
   let nextPlayer = "";
+  const lastPlayerOrder = order.indexOf(lastPlayer);
 
   if (orderBy === "ASC") {
-    if (order[lastPlayer] === 3) {
+    if (lastPlayerOrder === 3) {
       nextPlayer = order[0];
     } else {
-      nextPlayer = order[lastPlayer + 1];
+      nextPlayer = order[lastPlayerOrder + 1];
     }
   } else {
-    if (order[lastPlayer] === 0) {
+    if (lastPlayerOrder === 0) {
       nextPlayer = order[3];
     } else {
-      nextPlayer = order[lastPlayer - 1];
+      nextPlayer = order[lastPlayerOrder - 1];
     }
   }
 
   // Lista as cartas do jogador e o número de cartas das CPUs para o próximo turno
   const nextCards = playersCards.map((i) => {
-    if (i.playerId === playerId) {
-      return i.cards;
+    if (i.isCpu === false) {
+      return { playerId: i.playerId, cards: i.cards };
     } else {
-      return i.cards.length;
+      return { playerId: i.playerId, cards: i.cards.length};
     }
   });
 
   return {
+    lastCard,
+    lastColor,
     nextPlayer,
     nextCards,
   };
 };
 
-module.exports = { checkCard, nextTurnCheck, playCard };
+const updateCards = (card, id, playersCards) => {
+  // Retira a carta do deck
+  const update = playersCards.map((i) => {
+    if (i.playerId === id) {
+      const cards = i.cards.filter((j) => j !== card);
+      return { playerId: i.playerId, cards: cards, isCpu: i.isCpu };
+    } else {
+      return i;
+    }
+  });
+
+  return update;
+};
+
+module.exports = { checkCard, nextTurnCheck, playCard, updateCards };
