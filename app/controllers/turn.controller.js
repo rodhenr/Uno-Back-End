@@ -187,13 +187,11 @@ const playTurn = async (req, res) => {
 
     // No caso da cpu não possuir uma carta válida, ela saca uma nova carta e passa o turno
     if (move === undefined) {
-      console.log(myInfo.cards.length);
       playersCards.forEach((i) => {
         if (i.playerId === id) {
           i.cards = [...i.cards, remainingCards.splice(0, 1)[0]];
         }
       });
-      console.log(myInfo.cards.length);
 
       move = {
         lastCard,
