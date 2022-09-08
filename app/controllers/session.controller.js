@@ -3,11 +3,17 @@ const { v4: uuidv4 } = require("uuid");
 const { cards } = require("../helpers/cards.helpers");
 const { nextTurnCheck } = require("../helpers/rules.helpers");
 
+
+//CRIAR RECCONECT
+
 const startNewSession = async (req, res) => {
   const { playerId } = req.body;
-  const cardList = cards;
+  const cardList = cards.slice();
   const order = [];
   const playersCards = [];
+  let top = "";
+  let left = "";
+  let right = "";
 
   if (!playerId || playerId === "")
     return res.status(400).send("Player Inválido!");
@@ -26,6 +32,24 @@ const startNewSession = async (req, res) => {
     } else {
       order.push(uuidv4());
     }
+  }
+
+  if (orderPlayer === 0) {
+    left = order[1];
+    top = order[2];
+    right = order[3];
+  } else if (orderPlayer === 1) {
+    left = order[2];
+    top = order[3];
+    right = order[0];
+  } else if (orderPlayer === 2) {
+    left = order[3];
+    top = order[0];
+    right = order[1];
+  } else {
+    left = order[0];
+    top = order[1];
+    right = order[2];
   }
 
   // Distribui as cartas para cada player, sendo 7 para cada um
@@ -48,6 +72,9 @@ const startNewSession = async (req, res) => {
   // Cria a nova sessão de jogo
   try {
     const newSession = await GameSession.create({
+      cpuLeftId: left,
+      cpuRightId: right,
+      cpuTopId: top,
       lastCard,
       lastColor: lastCard.charAt(2),
       lastPlayer: order[3],
@@ -68,7 +95,7 @@ const startNewSession = async (req, res) => {
 };
 
 const startGame = async (req, res) => {
-  const { playerId, sessionId } = req.query;
+  const { playerId, sessionId } = req.body;
 
   if (!playerId || !sessionId)
     return res.status(400).send("Informações inválidas!");
@@ -85,15 +112,6 @@ const startGame = async (req, res) => {
     if (player.length === 0)
       return res.status(404).send("Jogador não encontrado!");
 
-    // Filtra as cartas
-    const cards = session.playersCards.map((i) => {
-      if (i.playerId === playerId) {
-        return { playerId: i.playerId, cards: i.cards, isCpu: i.isCpu };
-      } else {
-        return { playerId: i.playerId, cards: i.cards.length, isCpu: i.isCpu };
-      }
-    });
-
     const nextTurn = nextTurnCheck(
       session.lastCard,
       session.lastColor,
@@ -104,7 +122,13 @@ const startGame = async (req, res) => {
       playerId
     );
 
-    res.status(200).json(nextTurn);
+    res.status(200).json({
+      cpuLeftId: session.cpuLeftId,
+      cpuRightId: session.cpuRightId,
+      cpuTopId: session.cpuTopId,
+      ...nextTurn,
+      sessionId: session._id,
+    });
   } catch (err) {
     res.status(500).send("Erro no servidor...");
     console.log(err);

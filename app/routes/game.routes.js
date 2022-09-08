@@ -11,9 +11,9 @@ const {
   playTurn,
 } = require("../controllers/turn.controller.js");
 
-router.route("/new").post(startNewSession);
-router.route("/start").get(startGame);
-router.route("/session/play").post(playTurn);
-router.route("/session/buy").post(buyCard);
+router.route("/api/new").post(startNewSession);
+router.route("/api/start").post(startGame);
+router.route("/api/session/play").post(playTurn);
+router.route("/api/session/buy").post(buyCard);
 
 module.exports = router;

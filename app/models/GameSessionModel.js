@@ -2,6 +2,9 @@ const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 
 const GameSessionSchema = Schema({
+  cpuLeftId: {type: String, required: true},
+  cpuRightId: {type: String, required: true},
+  cpuTopId: {type: String, required: true},
   lastCard: { type: String, required: true },
   lastColor: { type: String, required: true },
   lastPlayer: { type: String, required: true },

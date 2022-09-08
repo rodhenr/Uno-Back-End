@@ -167,7 +167,7 @@ const nextTurnCheck = (
   lastPlayer,
   order,
   orderBy,
-  playersCards,
+  playersCards
 ) => {
   // Checa qual próximo player a jogar
   let nextPlayer = "";
@@ -190,17 +190,17 @@ const nextTurnCheck = (
   // Lista as cartas do jogador e o número de cartas das CPUs para o próximo turno
   const nextCards = playersCards.map((i) => {
     if (i.isCpu === false) {
-      return { playerId: i.playerId, cards: i.cards };
+      return { playerId: i.playerId, cards: i.cards, isCpu: i.isCpu };
     } else {
-      return { playerId: i.playerId, cards: i.cards.length};
+      return { playerId: i.playerId, cards: [i.cards.length], isCpu: i.isCpu };
     }
   });
 
   return {
     lastCard,
     lastColor,
-    nextPlayer,
     nextCards,
+    nextPlayer,
   };
 };
 
