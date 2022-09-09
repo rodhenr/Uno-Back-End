@@ -3,7 +3,6 @@ const {
   playCard,
   checkCard,
   nextTurnCheck,
-  updateCards,
 } = require("../helpers/rules.helpers");
 
 const buyCard = async (req, res) => {
@@ -28,6 +27,9 @@ const buyCard = async (req, res) => {
       remainingCards,
       winner,
     } = session;
+
+    if (remainingCards.length === 0)
+      return res.status(400).send("Nenhuma carta restante!");
 
     const lastPlayerOrder = order.indexOf(lastPlayer);
 
@@ -64,7 +66,8 @@ const buyCard = async (req, res) => {
       lastPlayer,
       order,
       orderBy,
-      playersCards
+      playersCards,
+      remainingCards.length
     );
 
     // Cria um objeto com as informações atualizadas
@@ -187,21 +190,33 @@ const playTurn = async (req, res) => {
 
     // No caso da cpu não possuir uma carta válida, ela saca uma nova carta e passa o turno
     if (move === undefined) {
-      playersCards.forEach((i) => {
-        if (i.playerId === id) {
-          i.cards = [...i.cards, remainingCards.splice(0, 1)[0]];
-        }
-      });
+      if (remainingCards.length > 0) {
+        playersCards.forEach((i) => {
+          if (i.playerId === id) {
+            i.cards = [...i.cards, remainingCards.splice(0, 1)[0]];
+          }
+        });
 
-      move = {
-        lastCard,
-        lastColor,
-        lastPlayer: id,
-        order,
-        orderBy,
-        playersCards,
-        remainingCards,
-      };
+        move = {
+          lastCard,
+          lastColor,
+          lastPlayer: id,
+          order,
+          orderBy,
+          playersCards,
+          remainingCards,
+        };
+      } else {
+        move = {
+          lastCard,
+          lastColor,
+          lastPlayer: id,
+          order,
+          orderBy,
+          playersCards,
+          remainingCards,
+        };
+      }
     }
 
     // Checa o próximo player e as cartas de todos players
@@ -211,7 +226,8 @@ const playTurn = async (req, res) => {
       move.lastPlayer,
       move.order,
       move.orderBy,
-      move.playersCards
+      move.playersCards,
+      move.remainingCards.length
     );
 
     // Verifica se venceu

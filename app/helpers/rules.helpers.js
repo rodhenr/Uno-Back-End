@@ -1,3 +1,4 @@
+const { cards: cardList } = require("./cards.helpers");
 //firstLetter = Identificador
 //secondLetter = Caso seja número
 //thirdLetter = Cor
@@ -62,6 +63,7 @@ const playCard = (
     const newCards = [];
     const playerOrder = order.indexOf(id);
     let newColor;
+    const arrayCards = cardList.slice();
 
     // Pega as primeiras cartas restantes do baralho
     if (card.charAt(0) === "F") {
@@ -69,11 +71,15 @@ const playCard = (
       newColor = colors[Math.floor(Math.random() * 4)];
 
       for (let i = 0; i < 4; i++) {
-        newCards.push(remainingCards.splice(i, 1)[0]);
+        newCards.push(
+          arrayCards[Math.floor(Math.random() * arrayCards.length)]
+        );
       }
     } else {
       for (let i = 0; i < 2; i++) {
-        newCards.push(remainingCards.splice(i, 1)[0]);
+        newCards.push(
+          arrayCards[Math.floor(Math.random() * arrayCards.length)]
+        );
       }
       newColor = card.charAt(2);
     }
@@ -167,7 +173,8 @@ const nextTurnCheck = (
   lastPlayer,
   order,
   orderBy,
-  playersCards
+  playersCards,
+  remaining
 ) => {
   // Checa qual próximo player a jogar
   let nextPlayer = "";
@@ -197,6 +204,7 @@ const nextTurnCheck = (
   });
 
   return {
+    deckEmpty: remaining === 0 ? true : false,
     lastCard,
     lastColor,
     nextCards,
