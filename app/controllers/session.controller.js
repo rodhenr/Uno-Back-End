@@ -82,7 +82,7 @@ const startNewSession = async (req, res) => {
       orderBy: "ASC",
       playersCards,
       remainingCards: cardList,
-      winner: null,
+      winner: "",
     });
 
     const sessionId = newSession._id;
@@ -104,7 +104,7 @@ const startGame = async (req, res) => {
     // Procura e filtra a Session
     const session = await GameSession.findById(sessionId);
     if (!session) return res.status(404).send("Sessão de jogo não encontrada!");
-    if (session.winner !== null)
+    if (session.winner !== "")
       return res.status(400).send("Sessão de jogo já finalizada!");
 
     // Verifica se o playerId está participando da Session

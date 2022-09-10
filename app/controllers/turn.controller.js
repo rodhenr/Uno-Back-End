@@ -13,7 +13,7 @@ const buyCard = async (req, res) => {
   try {
     const session = await GameSession.findById(sessionId);
     if (!session) return res.status(404).send("Sessão de jogo não encontrada!");
-    if (session.winner !== null)
+    if (session.winner !== "")
       return res.status(400).send("Sessão de jogo já finalizada!");
 
     // Cria variáveis
@@ -69,7 +69,6 @@ const buyCard = async (req, res) => {
       playersCards,
       remainingCards.length
     );
-
     // Cria um objeto com as informações atualizadas
     const sessionModified = {
       lastCard,
@@ -79,7 +78,7 @@ const buyCard = async (req, res) => {
       orderBy,
       playersCards,
       remainingCards,
-      winner,
+      winner: nextTurn.winner,
     };
 
     // Atualiza o banco de dados
@@ -94,13 +93,15 @@ const buyCard = async (req, res) => {
 const playTurn = async (req, res) => {
   const { card, id, sessionId } = req.body;
 
+  //ALTERAR FORMA DO +4 E +2
+
   if (!card || !id || !sessionId)
     return res.status(400).send("Dados inválidos!");
 
   try {
     const session = await GameSession.findById(sessionId);
     if (!session) return res.status(404).send("Sessão de jogo não encontrada!");
-    if (session.winner !== null)
+    if (session.winner !== "")
       return res.status(400).json({
         message: "Sessão de jogo já finalizada!",
         winner: session.winner,
@@ -230,10 +231,6 @@ const playTurn = async (req, res) => {
       move.remainingCards.length
     );
 
-    // Verifica se venceu
-    const isWinner = move.playersCards.filter((i) => i.playerId === id)[0].cards
-      .length;
-
     // Cria um objeto com as informações atualizadas
     const sessionModified = {
       lastCard: move.lastCard,
@@ -243,15 +240,13 @@ const playTurn = async (req, res) => {
       orderBy: move.orderBy,
       playersCards: move.playersCards,
       remainingCards: move.remainingCards,
-      winner: isWinner === 0 ? id : null,
+      winner: nextTurn.winner,
     };
 
     // Atualiza o banco de dados
     await GameSession.findByIdAndUpdate(sessionId, sessionModified);
 
-    isWinner === 0
-      ? res.status(200).json({ message: "Fim de jogo!", winner: id })
-      : res.status(200).json(nextTurn);
+    res.status(200).json(nextTurn);
   } catch (err) {
     res.status(500).send("Erro no servidor...");
     console.log(err);

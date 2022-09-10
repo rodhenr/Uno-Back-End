@@ -179,6 +179,8 @@ const nextTurnCheck = (
   // Checa qual próximo player a jogar
   let nextPlayer = "";
   const lastPlayerOrder = order.indexOf(lastPlayer);
+  const isWinner = playersCards.filter((i) => i.playerId === lastPlayer)[0]
+    .cards.length;
 
   if (orderBy === "ASC") {
     if (lastPlayerOrder === 3) {
@@ -209,6 +211,7 @@ const nextTurnCheck = (
     lastColor,
     nextCards,
     nextPlayer,
+    winner: isWinner === 0 ? lastPlayer : "",
   };
 };
 
