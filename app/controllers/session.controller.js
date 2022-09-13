@@ -3,7 +3,6 @@ const { v4: uuidv4 } = require("uuid");
 const { cards } = require("../helpers/cards.helpers");
 const { nextTurnCheck } = require("../helpers/rules.helpers");
 
-
 //CRIAR RECCONECT
 
 const startNewSession = async (req, res) => {
@@ -68,6 +67,13 @@ const startNewSession = async (req, res) => {
 
   // Retira uma carta do baralho para ser a inicial
   const lastCard = cardList.splice(0, 1)[0];
+  let lastColor = lastCard.charAt(2);
+
+  if (lastCard.charAt(1) === "C" || lastCard.charAt(1) === "F") {
+    const colors = ["Y", "R", "B", "G"];
+    const randColor = colors[Math.floor(Math.random() * 4)];
+    lastColor = randColor;
+  }
 
   // Cria a nova sessão de jogo
   try {
@@ -76,7 +82,7 @@ const startNewSession = async (req, res) => {
       cpuRightId: right,
       cpuTopId: top,
       lastCard,
-      lastColor: lastCard.charAt(2),
+      lastColor,
       lastPlayer: order[3],
       order,
       orderBy: "ASC",

@@ -206,7 +206,6 @@ const nextTurnCheck = (
   });
 
   return {
-    deckEmpty: remaining === 0 ? true : false,
     lastCard,
     lastColor,
     nextCards,
@@ -219,8 +218,9 @@ const updateCards = (card, id, playersCards) => {
   // Retira a carta do deck
   const update = playersCards.map((i) => {
     if (i.playerId === id) {
-      const cards = i.cards.filter((j) => j !== card);
-      return { playerId: i.playerId, cards: cards, isCpu: i.isCpu };
+      const cardIndex = i.cards.indexOf(card);
+      i.cards.splice(cardIndex, 1);
+      return { playerId: i.playerId, cards: i.cards, isCpu: i.isCpu };
     } else {
       return i;
     }
