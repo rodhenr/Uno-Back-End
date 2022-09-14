@@ -66,10 +66,10 @@ const startNewSession = async (req, res) => {
   });
 
   // Retira uma carta do baralho para ser a inicial
-  const lastCard = cardList.splice(0, 1)[0];
+  const lastCard = "CH1";
   let lastColor = lastCard.charAt(2);
 
-  if (lastCard.charAt(1) === "C" || lastCard.charAt(1) === "F") {
+  if (lastCard.charAt(0) === "C" || lastCard.charAt(0) === "F") {
     const colors = ["Y", "R", "B", "G"];
     const randColor = colors[Math.floor(Math.random() * 4)];
     lastColor = randColor;
