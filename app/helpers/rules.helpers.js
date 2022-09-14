@@ -46,13 +46,20 @@ const playCard = (
   remainingCards
 ) => {
   if (card.charAt(0) === "C") {
-    // Muda a cor atual
-    const colors = ["Y", "R", "B", "G"];
-    const randColor = colors[Math.floor(Math.random() * 4)];
+    const letter = card.charAt(2);
+    const condition =
+      letter !== "Y" && letter !== "G" && letter !== "R" && letter !== "B";
+    let randColor;
+
+    if (condition) {
+      // Muda a cor atual
+      const colors = ["Y", "R", "B", "G"];
+      randColor = colors[Math.floor(Math.random() * 4)];
+    }
 
     return {
       lastCard: card,
-      lastColor: randColor,
+      lastColor: condition ? randColor : letter,
       lastPlayer: id,
       order,
       orderBy,
@@ -67,8 +74,16 @@ const playCard = (
 
     // Pega as primeiras cartas restantes do baralho
     if (card.charAt(0) === "F") {
-      const colors = ["Y", "R", "B", "G"];
-      newColor = colors[Math.floor(Math.random() * 4)];
+      const letter = card.charAt(2);
+      const condition =
+        letter !== "Y" && letter !== "G" && letter !== "R" && letter !== "B";
+
+      newColor = letter;
+
+      if (condition) {
+        const colors = ["Y", "R", "B", "G"];
+        newColor = colors[Math.floor(Math.random() * 4)];
+      }
 
       for (let i = 0; i < 4; i++) {
         newCards.push(
@@ -218,9 +233,34 @@ const updateCards = (card, id, playersCards) => {
   // Retira a carta do deck
   const update = playersCards.map((i) => {
     if (i.playerId === id) {
-      const cardIndex = i.cards.indexOf(card);
-      i.cards.splice(cardIndex, 1);
-      return { playerId: i.playerId, cards: i.cards, isCpu: i.isCpu };
+      if (i.isCpu === false) {
+        if (card.charAt(0) === "C" || card.charAt(0) === "F") {
+          const indexOne = i.cards.indexOf(card.substring(0, 2) + "1");
+          const indexTwo = i.cards.indexOf(card.substring(0, 2) + "2");
+          const indexThree = i.cards.indexOf(card.substring(0, 2) + "3");
+          const indexFour = i.cards.indexOf(card.substring(0, 2) + "4");
+
+          if (indexOne !== -1) {
+            i.cards.splice(indexOne, 1);
+          } else if (indexTwo !== -1) {
+            i.cards.splice(indexTwo, 1);
+          } else if (indexThree !== -1) {
+            i.cards.splice(indexThree, 1);
+          } else {
+            i.cards.splice(indexFour, 1);
+          }
+
+          return { playerId: i.playerId, cards: i.cards, isCpu: i.isCpu };
+        } else {
+          const cardIndex = i.cards.indexOf(card);
+          i.cards.splice(cardIndex, 1);
+          return { playerId: i.playerId, cards: i.cards, isCpu: i.isCpu };
+        }
+      } else {
+        const cardIndex = i.cards.indexOf(card);
+        i.cards.splice(cardIndex, 1);
+        return { playerId: i.playerId, cards: i.cards, isCpu: i.isCpu };
+      }
     } else {
       return i;
     }

@@ -59,7 +59,7 @@ const startNewSession = async (req, res) => {
     }
 
     if (i === playerId) {
-      playersCards.push({ playerId: i, cards, isCpu: false });
+      playersCards.push({ playerId: i, cards: [...cards, "FO1"], isCpu: false });
     } else {
       playersCards.push({ playerId: i, cards, isCpu: true });
     }

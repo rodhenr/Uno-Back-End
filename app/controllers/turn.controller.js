@@ -114,7 +114,8 @@ const playTurn = async (req, res) => {
       remainingCards,
     } = session;
 
-    remainingCards = remainingCards.length === 0 ? cards.slice() : remainingCards
+    remainingCards =
+      remainingCards.length === 0 ? cards.slice() : remainingCards;
 
     const lastPlayerOrder = order.indexOf(lastPlayer);
     const myInfo = playersCards.filter((i) => i.playerId === id)[0];
@@ -139,12 +140,22 @@ const playTurn = async (req, res) => {
 
     // No caso de ser um player, verifica se a carta existe e se é válida no turno atual
     if (myInfo.isCpu === false) {
-      const cardIndex = playersCards
-        .filter((i) => i.playerId === id)[0]
-        .cards.indexOf(card);
-      if (cardIndex === -1) return res.status(404).send("Carta inválida!");
-      if (checkCard(card, lastCard, lastColor) === null)
-        return res.status(400).send("Jogada inválida!");
+      if (card.charAt(0) === "C" || card.charAt(0) === "F") {
+        const cardIndex = playersCards
+          .filter((i) => i.playerId === id)[0]
+          .cards.some((i) => i.charAt(0) === "C" || i.charAt(0) === "F");
+
+        if (cardIndex === false) return res.status(404).send("Carta inválida!");
+      } else {
+        const cardIndex = playersCards
+          .filter((i) => i.playerId === id)[0]
+          .cards.indexOf(card);
+
+        if (cardIndex === -1) return res.status(404).send("Carta inválida!");
+
+        if (checkCard(card, lastCard, lastColor) === null)
+          return res.status(400).send("Jogada inválida!");
+      }
     }
 
     // Faz uma jogada
