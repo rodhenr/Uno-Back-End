@@ -1,6 +1,6 @@
 ## Descrição do Projeto :ledger:
 
-Uma API do jogo UNO.
+Este repositório é a parte backend do projeto [UNO](https://github.com/rodhenr/Uno-Front-End).
 
 ## Tecnologias :man_technologist:
 
